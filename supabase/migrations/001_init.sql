@@ -62,7 +62,14 @@ select
   c.follower_count,
   c.created_at,
   count(p.id) filter (where p.published_at >= now() - interval '7 days')::int as posts_7d,
-  coalesce(round(avg(ms.engagement)) filter (where p.published_at >= now() - interval '7 days'), 0)::int as avg_engagement,
+  coalesce(
+  round(
+    avg(ms.engagement) filter (
+      where p.published_at >= now() - interval '7 days'
+    )
+  ),
+  0
+)::int as avg_engagement,
   least(100, round(
     coalesce(avg(ms.engagement), 0) / greatest(coalesce(c.follower_count, 1), 1) * 850
     + least(count(p.id) filter (where p.published_at >= now() - interval '7 days') * 2.2, 25)
