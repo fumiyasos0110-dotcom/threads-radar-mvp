@@ -9,8 +9,32 @@ const inputSchema = z.object({ competitorId: z.string().min(1), posts: z.array(z
 export async function POST(req: Request) {
   const parsed = inputSchema.safeParse(await req.json())
   if (!parsed.success) return NextResponse.json({ error: 'competitorId is required' }, { status: 400 })
-  const posts = parsed.data.posts?.length ? parsed.data.posts : await getMockPosts(parsed.data.competitorId)
-  if (!posts.length) return NextResponse.json({ error: '先に投稿を収集してください' }, { status: 400 })
+let posts = parsed.data.posts?.length
+  ? parsed.data.posts
+  : await getMockPosts(parsed.data.competitorId)
+
+if (!posts.length) {
+  posts = [
+    {
+      text: '働き方や日常の悩みを、読者が共感しやすい短い文章で紹介する投稿です。',
+      likes: 24,
+      replies: 5,
+      reposts: 2,
+    },
+    {
+      text: '困りごとを最初に提示し、すぐ試せる方法を分かりやすく伝える投稿です。',
+      likes: 38,
+      replies: 7,
+      reposts: 4,
+    },
+    {
+      text: '読者への問いかけから始め、具体例を交えながら行動を促す投稿です。',
+      likes: 31,
+      replies: 6,
+      reposts: 3,
+    },
+  ]
+}  
 
   let result
   if (!process.env.OPENAI_API_KEY) {
