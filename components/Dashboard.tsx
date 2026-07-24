@@ -8,8 +8,9 @@ export function Dashboard() {
   const [mode, setMode] = useState('mock')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
-  const [selectedId, setSelectedId] = useState('')
+const [analysis, setAnalysis] = useState<AnalysisResult | null>(null)
+const [generatedPost, setGeneratedPost] = useState('')
+const [selectedId, setSelectedId] = useState('')
 
   async function refresh() {
     const res = await fetch('/api/competitors', { cache: 'no-store' })
@@ -37,7 +38,38 @@ export function Dashboard() {
     else setMessage(json.error ?? '分析に失敗しました')
     setBusy(false)
   }
+async function generatePost() {
+  if (!analysis) return
 
+  setBusy(true)
+  setMessage('AIが投稿を作成中…')
+
+  const res = await fetch('/api/generate-post', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      analysis,
+    }),
+  })
+
+  const json = await res.json()
+
+if (res.ok) {
+  const postText =
+    typeof json.result === 'string'
+      ? json.result
+      : `${json.result.title ?? ''}\n\n${json.result.body ?? ''}`
+
+  setGeneratedPost(postText)
+  setMessage('投稿を生成しました！')
+} else {
+  setMessage(json.error ?? '生成に失敗しました')
+}
+
+setBusy(false)
+}
   const top = competitors[0]
   const totals = useMemo(() => competitors.reduce((sum, c) => sum + c.posts7d, 0), [competitors])
   const selected = competitors.find(c => c.id === selectedId)
@@ -60,10 +92,119 @@ export function Dashboard() {
       <div className="table-wrap"><table className="table"><thead><tr><th>アカウント</th><th>Radar Score</th><th>フォロワー</th><th>7日投稿</th><th>平均反応</th><th></th></tr></thead>
       <tbody>{competitors.map(c=><tr key={c.id}><td>@{c.username}</td><td className="score">{c.score}</td><td>{c.followers.toLocaleString()}</td><td>{c.posts7d}</td><td>{c.avgEngagement}</td><td><button className="link-btn" disabled={busy} onClick={()=>analyze(c.id)}>分析</button></td></tr>)}</tbody></table></div>
     </section>
-    {analysis && <section className="analysis-grid">
-      <article className="panel"><div className="eyebrow">@{selected?.username}</div><h2>伸びた要因</h2>{analysis.growth_factors.map((x,i)=><p key={i}>{i+1}. {x}</p>)}</article>
-      <article className="panel"><div className="eyebrow">再利用可能</div><h2>投稿の型</h2>{analysis.reusable_patterns.map((x,i)=><p key={i}>{i+1}. {x}</p>)}</article>
-      <article className="panel ideas"><div className="eyebrow">あなた向け</div><h2>投稿案</h2>{analysis.post_ideas.map((x,i)=><div className="idea" key={i}>{x}</div>)}</article>
-    </section>}
+        {analysis && (
+      <section className="analysis-grid">
+        <article className="panel">
+          <div className="eyebrow">@{selected?.username}</div>
+          <h2>伸びた要因</h2>
+
+          {analysis.growth_factors.map((x, i) => (
+            <p key={i}>
+              {i + 1}. {x}
+            </p>
+          ))}
+        </article>
+
+        <article className="panel">
+          <div className="eyebrow">再利用可能</div>
+          <h2>投稿の型</h2>
+
+          {analysis.reusable_patterns.map((x, i) => (
+            <p key={i}>
+              {i + 1}. {x}
+            </p>
+          ))}
+        </article>
+
+        <article className="panel ideas">
+          <div className="eyebrow">あなた向け</div>
+          <h2>投稿案</h2>
+
+          {analysis.post_ideas.map((x, i) => (
+            <div className="idea" key={i}>
+              {x}
+            </div>
+          ))}
+        </article>
+
+        <article className="panel ideas">
+          <div className="eyebrow">✨ AI</div>
+          <h2>投稿生成</h2>
+
+          <p>
+            この競合分析をもとに、
+            あなた専用のThreads投稿を生成します。
+          </p>
+
+          <button
+  className="btn"
+  disabled={busy}
+  onClick={generatePost}
+>
+  {busy ? '生成中…' : 'この分析から投稿を作る'}
+</button>
+{generatedPost && (
+  <div
+    className="idea"
+    style={{
+      marginTop: 20,
+      whiteSpace: 'pre-wrap',
+    }}
+  >
+    <h3>✨ AIが作成したThreads投稿</h3>
+<div style={{ display: 'grid', gap: 20, marginTop: 20 }}>
+  {generatedPost
+    .split('###')
+    .filter(Boolean)
+    .map((section, index) => {
+      const lines = section.trim().split('\n')
+      const title = lines.shift() || ''
+      const body = lines.join('\n').trim()
+
+      return (
+        <div
+          key={index}
+          style={{
+            border: '1px solid #2a2a2a',
+            borderRadius: 14,
+            padding: 20,
+            background: '#111827',
+          }}
+        >
+          <h3 style={{ marginBottom: 16 }}>
+            {title.trim()}
+          </h3>
+
+          <div
+            style={{
+              whiteSpace: 'pre-wrap',
+              lineHeight: 1.8,
+              fontSize: 15,
+            }}
+          >
+            {body}
+          </div>
+
+          <button
+            className="btn secondary"
+            style={{ marginTop: 20 }}
+            onClick={() => {
+              navigator.clipboard.writeText(body)
+              alert('コピーしました！')
+            }}
+          >
+            📋 この投稿をコピー
+          </button>
+        </div>
+      )
+    })}
+</div>
+   
+     
+  </div>
+)}
+        </article>
+      </section>
+    )}
   </main>
 }

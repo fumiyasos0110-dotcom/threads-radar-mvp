@@ -17,11 +17,24 @@ export async function POST(req: Request) {
     result = fallbackAnalysis(posts)
   } else {
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-    const response = await client.responses.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
-      input: [
+      const response = await client.responses.create({
+  model: process.env.OPENAI_MODEL || 'gpt-4.1-mini',
+  max_output_tokens: 700,
+  input: [
         { role: 'system', content: 'あなたはSNS競合分析者。投稿のコピーは避け、構造・テーマ・読者心理を抽象化して日本語で分析する。' },
-        { role: 'user', content: `次のThreads投稿群を分析してください。\n${JSON.stringify(posts.slice(0, 30))}` },
+        {
+  role: 'user',
+  content: `次のThreads投稿群を分析してください。
+
+${JSON.stringify(
+  posts.slice(0, 10).map((post) => ({
+    text: String(post.text ?? post.content ?? '').slice(0, 500),
+    likes: post.likes ?? 0,
+    replies: post.replies ?? 0,
+    reposts: post.reposts ?? 0,
+  }))
+)}`,
+},
       ],
       text: { format: { type: 'json_schema', name: 'competitor_analysis', strict: true, schema: {
         type: 'object', additionalProperties: false,

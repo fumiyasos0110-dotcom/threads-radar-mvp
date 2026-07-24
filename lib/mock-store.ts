@@ -3,7 +3,9 @@ import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { AnalysisResult, Competitor, RadarPost } from './types'
 
-const dataDir = path.join(process.cwd(), '.data')
+const dataDir = process.env.VERCEL
+  ? path.join('/tmp', 'threads-radar')
+  : path.join(process.cwd(), '.data')
 const dataFile = path.join(dataDir, 'mock-db.json')
 
 type MockDb = {
