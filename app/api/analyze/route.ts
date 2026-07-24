@@ -69,7 +69,16 @@ ${JSON.stringify(
         }, required: ['growth_factors', 'reusable_patterns', 'post_ideas'],
       } } },
     })
-    result = { ...JSON.parse(response.output_text), analyzed_at: new Date().toISOString() }
+    try {
+  result = {
+    ...JSON.parse(response.output_text),
+    analyzed_at: new Date().toISOString(),
+  }
+} catch (e) {
+  console.error(response.output_text)
+
+  result = fallbackAnalysis(posts)
+}
   }
   await saveMockAnalysis(parsed.data.competitorId, result)
   return NextResponse.json({ result, ai: Boolean(process.env.OPENAI_API_KEY) })
